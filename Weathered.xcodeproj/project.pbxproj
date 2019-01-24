@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5CBDF169AA0BC1933626E469 /* Pods_Weathered.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F97D061730C307C4A7BCBC5 /* Pods_Weathered.framework */; };
 		99A09BE821F92C8C0065C04B /* WeatherCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 99A09BE721F92C8C0065C04B /* WeatherCell.xib */; };
 		99A09BEA21F92CB90065C04B /* WeatherCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A09BE921F92CB90065C04B /* WeatherCell.swift */; };
 		99A09BED21FA823A0065C04B /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A09BEC21FA823A0065C04B /* Constants.swift */; };
@@ -17,6 +18,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0F97D061730C307C4A7BCBC5 /* Pods_Weathered.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Weathered.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FB6CB6FC4128238B50CD3FC /* Pods-Weathered.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Weathered.release.xcconfig"; path = "Pods/Target Support Files/Pods-Weathered/Pods-Weathered.release.xcconfig"; sourceTree = "<group>"; };
+		633C5A7AC937F3B0F24DB7C2 /* Pods-Weathered.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Weathered.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Weathered/Pods-Weathered.debug.xcconfig"; sourceTree = "<group>"; };
 		99A09BE721F92C8C0065C04B /* WeatherCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = WeatherCell.xib; sourceTree = "<group>"; };
 		99A09BE921F92CB90065C04B /* WeatherCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherCell.swift; sourceTree = "<group>"; };
 		99A09BEC21FA823A0065C04B /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -34,12 +38,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CBDF169AA0BC1933626E469 /* Pods_Weathered.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		95854B11D050F6915F22BCED /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0F97D061730C307C4A7BCBC5 /* Pods_Weathered.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		99A09BE321F92C460065C04B /* Model */ = {
 			isa = PBXGroup;
 			children = (
@@ -84,6 +97,8 @@
 			children = (
 				99FBA8D821F3806F003DFB52 /* Weathered */,
 				99FBA8D721F3806F003DFB52 /* Products */,
+				D647BD1D267EA42AEDF783DE /* Pods */,
+				95854B11D050F6915F22BCED /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +127,15 @@
 			path = Weathered;
 			sourceTree = "<group>";
 		};
+		D647BD1D267EA42AEDF783DE /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				633C5A7AC937F3B0F24DB7C2 /* Pods-Weathered.debug.xcconfig */,
+				4FB6CB6FC4128238B50CD3FC /* Pods-Weathered.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -119,9 +143,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 99FBA8E621F3806F003DFB52 /* Build configuration list for PBXNativeTarget "Weathered" */;
 			buildPhases = (
+				4BFE56B5D567371DB7CB233F /* [CP] Check Pods Manifest.lock */,
 				99FBA8D221F3806E003DFB52 /* Sources */,
 				99FBA8D321F3806E003DFB52 /* Frameworks */,
 				99FBA8D421F3806E003DFB52 /* Resources */,
+				98798359172ADC8D6FF08644 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -177,6 +203,53 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4BFE56B5D567371DB7CB233F /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Weathered-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		98798359172ADC8D6FF08644 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${SRCROOT}/Pods/Target Support Files/Pods-Weathered/Pods-Weathered-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/Alamofire/Alamofire.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Alamofire.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Weathered/Pods-Weathered-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		99FBA8D221F3806E003DFB52 /* Sources */ = {
@@ -321,6 +394,7 @@
 		};
 		99FBA8E721F3806F003DFB52 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 633C5A7AC937F3B0F24DB7C2 /* Pods-Weathered.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Weathered/Weathered.entitlements;
@@ -340,6 +414,7 @@
 		};
 		99FBA8E821F3806F003DFB52 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4FB6CB6FC4128238B50CD3FC /* Pods-Weathered.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Weathered/Weathered.entitlements;
