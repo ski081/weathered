@@ -23,5 +23,11 @@ class WeatherCell: NSCollectionViewItem {
                                               alpha: 0.5)
         view.layer?.cornerRadius = 5
     }
-    
+
+    func configure(with forecastItem: ForecastItem) {
+        weatherCellImageView.image = NSImage(named: NSImage.Name("\(forecastItem.weatherType.rawValue)"))
+        highTemperatureLabel.stringValue = "\(forecastItem.highTemp)°"
+        lowTemperatureLabel.stringValue = "\(forecastItem.lowTemp)°"
+        cellDateLabel.stringValue = forecastItem.date
+    }
 }

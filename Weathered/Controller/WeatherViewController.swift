@@ -15,6 +15,8 @@ class WeatherViewController: NSViewController {
     @IBOutlet weak var weatherImageView: NSImageView!
     @IBOutlet weak var weatherConditionLabel: NSTextField!
     @IBOutlet weak var collectionView: NSCollectionView!
+    @IBOutlet weak var poweredByButton: NSButton!
+    @IBOutlet weak var quitButton: NSButton!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,13 +31,42 @@ class WeatherViewController: NSViewController {
                                               green: 0.72,
                                               blue: 0.98,
                                               alpha: 1.0)
+        updateUI()
         
+        quitButton.styleButtonText(withName: "Quit",
+                                   fontColor: .darkGray,
+                                   alignment: .center,
+                                   font: "Avenir Next",
+                                   size: 11)
+        poweredByButton.styleButtonText(withName: "Powered By",
+                                        fontColor: .darkGray,
+                                        alignment: .center,
+                                        font: "Avenir Next",
+                                        size: 11)
+        
+        WeatherService.instance.downloadForecast { [unowned self] in
+            self.collectionView.reloadData()
+        }
     }
 
-    override var representedObject: Any? {
-        didSet {
-            
+    func updateUI() {
+        guard let weather = WeatherService.instance.currentWeather else {
+            return
         }
+        
+        dateLabel.stringValue = weather.date
+        temperatureLabel.stringValue = "\(weather.currentTemp)°"
+        weatherConditionLabel.stringValue = weather.weatherType.rawValue
+        weatherImageView.image = NSImage(named: NSImage.Name("\(weather.weatherType.rawValue)"))
+    }
+    
+    
+    @IBAction func poweredByButtonClicvked(_ sender: NSButton) {
+        NSWorkspace.shared.open(apiHomepageURL)
+    }
+    
+    @IBAction func quitButtonClicked(_ sender: NSButton) {
+        NSApplication.shared.terminate(nil)
     }
 }
 
@@ -43,7 +74,14 @@ extension WeatherViewController: NSCollectionViewDataSource {
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         let foreCastItem = collectionView.makeItem(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: "WeatherCell"),
                                                    for: indexPath)
-        return foreCastItem
+        
+        guard let forecastCell = foreCastItem as? WeatherCell else {
+            return foreCastItem
+        }
+        
+        forecastCell.configure(with: WeatherService.instance.forecast[indexPath.item])
+        
+        return forecastCell
     }
     
     func numberOfSections(in collectionView: NSCollectionView) -> Int {
@@ -51,7 +89,7 @@ extension WeatherViewController: NSCollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 7
+        return WeatherService.instance.forecast.count
     }
 }
 

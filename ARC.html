@@ -1,0 +1,612 @@
+As a modern, high-level programming language, Swift handles much of the memory management of your apps and allocates or deallocates memory on your behalf. It does so using a feature of the Clang compiler called <em>Automatic Reference Counting</em>, or <em>ARC</em>. In this tutorial, you'll learn all about ARC and memory management in Swift.
+
+With an understanding of this system, you can influence when the life of a heap object ends. Swift uses ARC to be extremely predictable and efficient in resource constrained environments — like iOS.Because ARC is “automatic”, you don’t have to explicitly participate in the reference counting of objects. You <i>do</i>, however, need to consider relationships between objects to avoid memory leaks. This is a very important requirement often overlooked by new developers.
+
+In this tutorial, you’ll level up your Swift and ARC skills by learning the following:
+
+<ul>
+    <li>How ARC works.</li>
+    <li>What reference cycles are and how to break them.</li>
+    <li>An example of a reference cycle in practice, and how to detect one with the latest Xcode visualization tools.</li>
+    <li>How to deal with mixed value and reference types.</li>
+</ul>
+
+<h2>Getting Started</h2>
+
+Click the Download Materials button at the top or bottom of this tutorial. In the folder named <em>Cycles</em>, open the starter project. For the first part of this tutorial, you'll be working completely inside <em>MainViewController.swift</em> to learn some core concepts. 
+
+Next, add the following code to <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+class User {
+    let name: String
+    
+    init(name: String) {
+        self.name = name
+        print("User \(name) was initialized")
+    }
+    
+    deinit {
+        print("Deallocating user named: \(name)")
+    }
+}
+</pre>
+
+This defines a class <code>User</code> The class <code>User</code> has one property, <code>name</code>, an <code>init</code> method (called just after memory allocation) and a <code>deinit</code> method (called just prior to deallocation). The <code>print</code> statements let you see what is happening.
+
+Now, initialize an instance of <code>User</code> at the top of <code>MainViewController</code>, just above <code>viewDidLoad()</code>:
+
+<pre lang="swift">
+    let user = User(name: "John")
+</pre>
+
+Now, run the app, and make sure the console is visible <em>(Command + Shift + Y)</em> so you can see the result of the <code>print</code> statements.You will notice that the console shows <code>"User John was initialized\n"</code> However, you will notice that the <code>print</code> statement within <code>deinit</code> is never called. 
+
+This means that the object is never deinitialized, which means it's never deallocated. That’s because the scope in which it was initialized is never closed — the view controller itself never goes out of scope — so the object is not removed from memory.
+
+Wrapping this instance in a function will allow it to go out of scope, and thus ARC will deallocate it. Create a function inside the <pre>MainViewController</pre> class right before the closing brace, and move the initialization of <code>User</code> inside of it.
+
+<pre lang="swift">
+func runScenario() {
+    let user = User(name: "John")
+}    
+</pre>
+
+<code>runScenario()</code> will define scope so an instance of <code>User</code> can be created. At the end of the scope, we would expect <code>user</code> to be deallocated. Now, ensure <code>runScenario()</code> is called inside the <code>viewDidLoad()</code> method:
+
+<pre lang="swift">
+override func viewDidLoad() {
+    super.viewDidLoad()
+    runScenario()
+}    
+</pre>
+
+Run the app again.
+
+Now you see both <code>print</code> statements that correspond to initialization and deinitialization in the console. This shows the object is being deinitialized at the end of the scope, just before it’s removed from memory.
+
+The lifetime of a Swift object consists of five stages:
+
+<ol>
+  <li>Allocation (memory taken from stack or heap)</li>
+  <li>Initialization (<code>init</code> code runs)</li>
+  <li>Usage (the object is used)</li>
+  <li>Deinitialization (<code>deinit</code> code runs)</li>
+  <li>Deallocation (memory returned to stack or heap)</li>
+</ol>
+
+While there are no direct hooks into allocation and deallocation, you can use <code>print</code> statements in <code>init</code> and <code>deinit</code> as a proxy for monitoring those processes. Sometimes “deallocate” and “deinit” are used interchangeably, but they are actually two distinct stages in an object’s lifetime.
+
+Reference counting is the mechanism by which an object is deallocated when it is no longer required. The question here is “When can you be <em>sure</em> an object won’t be needed in the future?” Reference counting manages this by keeping a usage count, also known as the <em>reference count</em>, inside each object instance. This count indicates how many "things" <em>reference</em> the object. When the reference count of an object hits zero no clients of the object remain, so the object deinitializes and deallocates.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/Scheme1-480x120.png" alt="SchemeOne" width="480" height="120" class="aligncenter size-medium wp-image-134431" />
+
+When you initialize the <code>User</code> object, it starts with a reference count of 1 since the constant <code>user</code> references that object. At the end of the <code>runScenario()</code> function, <code>user</code> goes out of scope, the count decrements, and the reference count decrements to zero. As a result, <code>user</code> deinitializes and subsequently deallocates.
+
+<h2>Reference cycles</h2>
+
+In most cases, ARC works like a charm. As a developer, you don’t usually have to worry about <em>memory leaks</em>, where unused objects stay alive indefinitely.
+
+But it's not all smnooth sailing! Leaks can happen!
+
+How can leaks happen? Imagine a situation where two objects are no longer required, but each references the another. Since each has a non-zero reference count, <i>neither</i> object can deallocate.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/ReferenceCycle-480x153.png" alt="ReferenceCycle" width="480" height="153" class="aligncenter size-medium wp-image-134425" />
+
+This is called a <em>strong reference cycle</em>. It fools ARC and prevents it from cleaning up. As you can see, the reference count at the end is not zero, and even though neither is still required, <code>object1</code> and <code>object2</code> are never deallocated.
+
+To see this in action, add the following code after the <code>User</code> class in <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+class Phone {
+    let model: String
+    var owner: User?
+    
+    init(model: String) {
+        self.model = model
+        print("Phone \(model) was initialized")
+    }
+    
+    deinit {
+        print("Deallocating phone named: \(model)")
+    }
+}          
+</pre>
+
+Then change the <code>runScenario()</code> function to look like this:
+
+<pre lang="swift">do { 
+  let user1 = User(name: "John")
+  let iPhone = Phone(model: "iPhone XS")
+}</pre>
+
+This adds a new class called <code>Phone</code>, and creates an instance of this new class.
+
+This new class is rather simple: two properties, one for the model and one for the owner, with an <code>init</code> and a <code>deinit</code> method. The <code>owner</code> property is optional, since a <code>Phone</code> can exist without a <code>User</code>.
+
+Next, add the following code to the <code>User</code> class, immediately after the <code>name</code> property:
+
+<pre lang="swift">
+private(set) var phones: [Phone] = []
+
+func add(phone: Phone) {
+  phones.append(phone)
+  phone.owner = self
+}
+</pre>
+
+This adds a <code>phones</code> array property to hold all phones owned by a user. The setter is made private so that clients are forced to use <code>add(phone:)</code>. This method ensures that <code>owner</code> is set properly when you add it.
+
+Now run the app. As you can see in the console, both <code>Phone</code> and <code>User</code> objects deallocate as expected.
+
+But now update the <code>runScenario()</code> function look like this:
+
+<pre lang="swift">
+func runScenario() { 
+  let user = User(name: "John")
+  let iPhone = Phone(model: "iPhone XS")
+  user.add(phone: iPhone)
+}
+</pre>
+
+Here, you add <code>iPhone</code> to <code>user</code>. This automatically sets the <code>owner</code> property of <code>iPhone</code> to <code>user</code>. A strong reference cycle between the two objects prevents ARC from deallocating them. As a result, both <code>user</code> and <code>iPhone</code> instances never deallocate.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/UserIphoneCycle-480x202.png" alt="UserIphoneCycle" width="480" height="202" class="aligncenter size-medium wp-image-134435" />
+
+<h2>Weak References</h2>
+
+To break strong reference cycles, you can specify the relationship between reference counted objects as <code>weak</code>. Unless otherwise specified, all references are strong. Weak references, by contrast, don’t increase the reference count of an object.
+
+In other words, weak references don’t participate in the lifecycle management of an object. Additionally, weak references are always declared as <em>optional</em> types. This means when the reference count goes to zero, the reference can automatically be set to <code>nil</code>.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/WeakReference-480x206.png" alt="WeakReference" width="480" height="206" class="aligncenter size-medium wp-image-134436" />
+
+In the image above, the dashed arrow represents a weak reference. Notice how the reference count of <code>object1</code> is 1 because <code>variable1</code> refers to it. The reference count of <code>object2</code> is 2, because both <code>variable2</code> and <code>object1</code> refer to it. While <code>object2</code> references <code>object1</code>, 
+it does so weakly, meaning it doesn’t affect the strong reference count of <code>object1</code>.
+
+When both <code>variable1</code> and <code>variable2</code> go away, <code>object1</code> will be left with a reference count of zero and <code>deinit</code> will be called. This removes the strong reference to <code>object2</code> which then subsequently deinitializes.
+
+Back in your th app, break the <code>User</code>-<code>Phone</code> reference cycle by making the <code>owner</code> reference weak as shown below:
+
+<pre lang="swift">
+class Phone {
+  weak var owner: User?
+  // other code...
+}</pre>
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/UserIphoneCycleWeaked-480x202.png" alt="UserIphoneCycleWeaked" width="480" height="202" class="aligncenter size-medium wp-image-134437" />
+
+Run the app again. Now <code>user</code> and <code>iPhone</code> deallocate properly once the <code>runScenario()</code> function exits scope.
+
+<h2>Unowned References</h2>
+
+There is another reference modifier you can use that doesn't increase the reference count: <code>unowned</code>.
+
+What's the difference between <code>unowned</code> and <code>weak</code>? A <code>weak</code> reference is <em>always</em> optional and automatically becomes <code>nil</code> when the referenced object deinitializes. That’s why you must define weak properties as optional <code>var</code> types for your code to compile. The variable needs to change.
+
+Unowned references, by contrast, are never optional types. If you try to access an unowned property that refers to a deinitialized object, you will trigger a runtime error comparable to force unwrapping a <code>nil</code> optional type.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/Table-480x227.png" alt="Table" width="480" height="227" class="aligncenter size-medium wp-image-134438" />
+
+Time to get some practice using <code>unowned</code>. Add a new class <code>CarrierSubscription</code> at the end of <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+class CarrierSubscription {
+    let name: String
+    let countryCode: String
+    let number: String
+    let user: User
+                
+    init(name: String, countryCode: String, number: String, user: User) {
+        self.name = name
+        self.countryCode = countryCode
+        self.number = number
+        self.user = user
+        
+        user.subscriptions.append(self)
+        print("CarrierSubscription \(name) is initialized")
+    }
+    
+    deinit {
+        print("Deallocating CarrierSubscription named: \(name)")
+    }
+}        
+</pre>
+
+<code>CarrierSubscription</code> has four properties: the <code>name</code> of the subscription, the <code>countryCode</code> and phone <code>number</code>, and a reference to a <code>User</code> object.
+
+Next, add the following to the <code>User</code> class, after the <code>name</code>property:
+
+<pre lang="swift">
+    var subscriptions: [CarrierSubscription] = []
+</pre>
+
+This adds a <code>subscriptions</code> property, which will hold an array of <code>CarrierSubscription</code> objects.
+
+Also, add the following to the top of the <code>Phone</code> class, after the <code>owner</code> property:
+
+<pre lang="swift">
+var carrierSubscription: CarrierSubscription?
+
+func provision(carrierSubscription: CarrierSubscription) {
+  self.carrierSubscription = carrierSubscription
+}
+
+func decommission() {
+  self.carrierSubscription = nil
+}
+</pre>
+
+This adds an optional <code>CarrierSubscription</code> property and two new functions to <code>provision</code> and <code>decommission</code> a carrier subscription on the phone.
+
+Next, add the following to <code>init</code> inside <code>CarrierSubscription</code>, just before the <code>print</code> statement:
+
+<pre lang="swift">
+    user.subscriptions.append(self)
+</pre>
+
+This ensures that this <code>CarrierSubscription</code> is added to the user's array of subscriptions.
+
+Finally, change the <code>runScenario()</code> function to look like this:
+
+<pre lang="swift">
+func runScenario() {
+  let user1 = User(name: "John")
+  let iPhone = Phone(model: "iPhone 6s Plus")
+  user1.add(phone: iPhone)
+  let subscription1 = CarrierSubscription(name: "TelBel", countryCode: "0032", number: "31415926", user: user1)
+  iPhone.provision(carrierSubscription: subscription1)
+}
+</pre>
+
+Run the app. Notice what is printed in the console. Again you see a reference cycle: neither <code>user</code>, <code>iPhone</code> or <code>subscription</code> are deallocated at the end. 
+
+Can you find where the issue is now?
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/UserIphoneSubCycle-480x175.png" alt="UserIphoneSubCycle" width="480" height="175" class="aligncenter size-medium wp-image-134440" />
+
+Either the reference from <code>user</code> to <code>subscription</code> or the reference from <code>subscription</code> to <code>user</code> should be <code>unowned</code> to break the cycle. The question is which of the two to choose. This is where a little bit of knowledge of your domain helps.
+
+A user owns a carrier subscription, and (contrary to what carriers may think!), the carrier subscription does not own the user. Moreover, it doesn’t make sense for a <code>CarrierSubscription</code> 
+to exist without an owning <code>User</code>. This is why you declared it as an immutable <code>let</code> property in the first place.
+
+Since a <code>User</code> with no <code>CarrierSubscription</code> can exist, but no <code>CarrierSubscription</code> can exist without a <code>User</code>, the <code>user</code> reference should be unowned.
+
+Add <code>unowned</code> to the <code>user</code> property of <code>CarrierSubscription</code> like so:
+
+<pre lang="swift">class CarrierSubscription {
+  let name: String
+  let countryCode: String
+  let number: String
+  unowned let user: User
+  // Other code...
+}
+</pre>
+
+This breaks the reference cycle and lets every object deallocate.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/UserIphoneCycleSubSolve-480x175.png" alt="UserIphoneCycleSubSolve" width="480" height="175" class="aligncenter size-medium wp-image-134441" />
+
+<h2>Reference Cycles with Closures</h2>
+
+Reference cycles for objects occur when properties reference each other. Like objects, closures are also reference types and can cause cycles. Closures <em>capture</em> (or close over) the objects they operate on.
+
+For example, if a closure is assigned to the property of a class, and that closure uses instance properties of that same class, you have a reference cycle. In other words, the object holds a reference to the closure via a stored property. The closure holds a reference to the object via the captured value of <code>self</code>.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/06/Closure-Referene-1-480x202.png" alt="Closure Reference" width="480" height="202" class="aligncenter size-medium wp-image-138305" />
+
+Add the following to <code>CarrierSubscription</code>, just after the <code>user</code> property:
+
+<pre lang="swift">
+lazy var completePhoneNumber: () -> String = {
+    self.countryCode + " " + self.number
+}
+</pre>
+
+This closure computes and returns a complete phone number.  The property is declared with <code>lazy</code>, meaning that it will not be assigned until it’s used the first time. This is required because it’s using <code>self.countryCode</code> and <code>self.number</code>, which aren't available until <em>after</em> the initializer runs.
+
+Add the following line at the end of the <code>runScenario()</code> function:
+
+<pre lang="swift">
+    print(subscription1.completePhoneNumber())
+</pre>
+
+You will notice that <code>user1</code> and <code>iPhone</code> deallocate, but not <code>CarrierSubscription</code> due to the strong reference cycle between the object and the closure.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/05/ClosureCylce-480x232.png" alt="Closure cycle" width="480" height="232" class="aligncenter size-medium wp-image-134444" />
+
+Swift has a simple, elegant way to break strong reference cycles in closures. You declare a <em>capture list</em> in which you define the relationships between the closure and the objects it captures.
+
+To illustrate how the capture list works, consider the following code:
+
+<pre lang="swift">
+var x = 5
+var y = 5
+
+let someClosure = { [x] in
+  print("\(x), \(y)")
+}
+
+x = 6
+y = 6
+
+someClosure()        // Prints 5, 6
+print("\(x), \(y)")  // Prints 6, 6</pre>
+
+The variable <code>x</code> is in the capture list, so a copy of <code>x</code> is made at the point the closure is defined. It is said to be captured by value. On the other hand, <code>y</code> is not in the capture list, and is instead captured by reference. This means that when the closure runs, <code>y</code> will be whatever it is at that point, 
+rather than at the point of capture.
+
+Capture lists come in handy for defining a <code>weak</code> or <code>unowned</code> relationship between objects used in a closure. In this case, <code>unowned</code> is a good fit since the closure 
+could not exist while the instance of <code>CarrierSubscription</code> has gone away.
+
+Change the <code>completePhoneNumber</code> closure in <code>CarrierSubscription</code> to look like this:
+
+<pre lang="swift">
+lazy var completePhoneNumber: () -> String = {
+  [unowned self] in
+  return self.countryCode + " " + self.number
+}
+</pre>
+
+This adds <code>[unowned self]</code> to the capture list for the closure. It means that <code>self</code> is captured as an <em>unowned</em> reference instead of a strong reference.
+
+This solves the reference cycle. Hooray!
+
+The syntax used here is actually a shorthand for a longer capture syntax, which introduces a new identifier. Consider the longer form:
+
+<pre lang="swift">
+var closure = {
+    [unowned newID = self] in
+    // Use unowned newID here...
+}
+</pre>
+
+Here, <code>newID</code> is an <code>unowned</code> copy of <code>self</code>. Outside the closure’s scope, <code>self</code> keeps its original meaning. In the short form, which you used above, a new <code>self</code> variable is created which <em>shadows</em> the existing <code>self</code> variable just for the closure's scope.
+
+In your code, the relationship between <code>self</code> and the <code>completePhoneNumber</code> closure is <code>unowned</code>. 
+If you are sure that a referenced object from a closure will never deallocate, you can use <code>unowned</code>.  If it does deallocate, you are in trouble. 
+
+Add the following code to the end of <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+// A class that generates WWDC Hello greetings.  See http://wwdcwall.com
+class WWDCGreeting {
+  let who: String
+  
+  init(who: String) {
+    self.who = who
+  }
+
+  lazy var greetingMaker: () -> String = {
+    [unowned self] in
+    return "Hello \(self.who)."
+  }
+}
+</pre>
+
+Next, add the following code block to the end of the <code>runScenario()</code> function:
+
+<pre lang="swift">
+let greetingMaker: () -> String
+
+do {
+    let mermaid = WWDCGreeting(who: "caffinated mermaid")
+    greetingMaker = mermaid.greetingMaker
+}
+
+greetingMaker() // TRAP!        
+</pre>
+
+The app hits a runtime exception because the closure expects <code>self.who</code> to still be valid, but it was deallocated when <code>mermaid</code> went out of scope in the <code>do</code> block. This example may seem contrived, but it can easily happen in real life such as when you use closures to run something much later, such as after an asynchronous network call has finished.
+
+Change the <code>greetingMaker</code> variable in <code>WWDCGreeting</code> to look like this:
+
+<pre lang="swift">
+lazy var greetingMaker: () -> String = { [weak self] in
+  return "Hello \(self?.who)."
+}
+</pre>
+
+There are two changes you made to the original <code>greetingMaker</code> closure. First, you replaced <code>unowned</code> with <code>weak</code>. Second, since <code>self</code> became <code>weak</code>, you needed to access the <code>who</code> property with <code>self?.who</code>.
+
+The app no longer crashes, but you get a curious result in the console: <code>"Hello, nil."</code>. 
+
+Perhaps this is acceptable, but more often you want to do something completely different if the object is gone. Swift’s <code>guard let</code> makes this easy.
+
+Re-write the closure one last time, to look like this:
+
+<pre lang="swift">
+lazy var greetingMaker: () -> String = { [weak self] in
+  guard let self = self else {
+    return "No greeting available."
+  }
+
+  return "Hello \(self.who)."
+}
+</pre>
+
+The guard statement binds <code>self</code> from <code>weak self</code>. If <code>self</code> is <code>nil</code>, the closure returns <code>"No greeting available."</code>. On the other hand, if <code>self</code> is not <code>nil</code>, it makes <code>self</code> a strong reference, so the object is <em>guaranteed</em> to live until the end of the closure.
+
+This idiom, sometimes referred to as the <em>strong-weak dance</em>, is part of the <a href="https://github.com/raywenderlich/swift-style-guide#memory-management">Ray Wenderlich Swift Style Guide</a> since it's a robust pattern for handling this behavior in closures.
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/testskillz-650x241.png" alt="testskillz" width="650" height="241" class="aligncenter size-large wp-image-141306" />
+
+<h2>Finding Reference Cycles in Xcode 10</h2>
+
+Now that you understand the principles of ARC, what reference cycles are and how to break them, it's time to look at a real world example. 
+
+Download the materials form the link at the top or bottom of this tutorial, and open the Starter project inside the <em>Contacts</em> folder in Xcode 10.
+
+Build and run the project, and you’ll see the following:
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/ss5-180x320.png" alt="ss5" width="180" height="320" class="aligncenter size-medium wp-image-138522" />
+
+This is a simple contacts app. Feel free to tap on a contact to get more information or add contacts using the <em>+</em> button on the top right.
+
+Have a look at the code:
+
+<ul>
+  <li><code>ContactsTableViewController</code>: shows all the <code>Contact</code> objects from the database.</li>
+  <li><code>DetailViewController</code>: shows the details for a certain <code>Contact</code> object.</li>
+  <li><code>NewContactViewController</code>: allows the user to add a new contact.</li>
+  <li><code>ContactTableViewCell</code>: a custom table view cell to show the details of a <code>Contact</code> object.</li>
+  <li><code>Contact</code>: the model for a contact in the database.</li>
+  <li><code>Number</code>: the model for a phone number.</li>
+</ul>
+
+There is, however, something horribly wrong with the project: buried in there is a reference cycle. Your user won’t notice the issue for quite some time since the leaking objects are small — and their size makes it even harder to trace. Luckily, Xcode 10 has a built-in tool to help you find even the smallest leaks.
+
+Build and run the app again. Delete three or four contacts by swiping their cells to the left and tapping <em>delete</em>. They appear the have disappeared completely, right?
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/ss1-180x320.png" alt="ss1" width="180" height="320" class="aligncenter size-medium wp-image-138523" />
+
+While the app is still running, move over to the bottom of Xcode and click the <em>Debug Memory Graph</em> button:
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/ss2-480x35.png" alt="ss2" width="480" height="35" class="aligncenter size-medium wp-image-138524" />
+
+Observe the <em>Runtime Issues</em> in Xcode 10. They look like a purple square with a white exclamation mark inside, such as the one shown selected in this screenshot:
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/ss3-243x320.png" alt="ss3" width="243" height="320" class="aligncenter size-medium wp-image-138525" />
+
+In the Navigator, select one of the problematic <code>Contact</code> objects. The cycle is clearly visible: <code>Contact</code> and <code>Number</code> objects keep each other alive by referencing one another.  
+
+<img src="https://koenig-media.raywenderlich.com/uploads/2016/07/4-325x320.png" alt="4" width="325" height="320" class="aligncenter size-medium wp-image-138526" />
+
+These type of graphs are a sign for you to look into your code. Consider that a <code>Contact</code> can exist without a <code>Number</code>, but a <code>Number</code> should not exist without a <code>Contact</code>. 
+
+How would you solve the cycle? Should the reference from <code>Contact</code> to <code>Number</code> or the one from <code>Number</code> to <code>Contact</code> be weak or unowned?
+
+Give it your best shot first, then take a look below if you need help!
+
+[spoiler]There are two possible solutions: you can either make the relationship from <code>Contact</code> to <code>Number</code> weak, or the relationship from <code>Number</code> to <code>Contact</code> unowned to solve the cycle.
+
+<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmPractical.html">Apple’s Documentation</a> recommends that a <code>parent</code> object should have a strong hold on a <code>child</code> object by convention — not the other way around. This means that giving <code>Contact</code> a strong hold on a <code>Number</code>, and <code>Number</code> an unowned reference to a <code>Contact</code>, is the most convenient solution:
+
+<pre lang="swift">
+class Number {
+  unowned var contact: Contact
+  // Other code...
+}
+</pre>
+
+<pre lang="swift">
+class Contact {
+  var number: Number?
+  // Other code...
+}
+</pre>
+
+Run and debug again. The issue has been resolved!
+[/spoiler]
+
+
+<h2>Bonus: Cycles with Value Types and Reference Types</h2>
+
+Swift types can be categorized as <em>reference types</em>, like classes, and <em>value types</em>, like structures or enumerations. The major difference is that value types are copied when they are passed around, whereas reference types share a single copy of referenced information.
+
+Does this mean that you can't have cycles with value types? Yes: everything is copied with value types, and thus no cyclical relationships can exist since no real references are created. You need at least two references to make a cycle.
+
+Back in the Cycles project, add the following at the end of <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+struct Node { // Error
+  var payload = 0
+  var next: Node? = nil
+}
+</pre>
+
+Hmm, the compiler's not happy. A <code>struct</code> (value type) cannot be recursive or use an instance of itself. Otherwise, a <code>struct</code> of this type would have an infinite size. 
+
+Change it to a class like so:
+
+<pre lang="swift">
+class Node {
+  var payload = 0
+  var next: Node? = nil
+}
+</pre>
+
+Self reference is not an issue for classes (i.e. reference types), so the compiler error disappears.
+
+Now, add this to <em>MainViewController.swift</em>:
+
+<pre lang="swift">
+class Person {
+  var name: String
+  var friends: [Person] = []
+  init(name: String) {
+    self.name = name
+    print("New person instance: \(name)")
+  }
+  
+  deinit {
+    print("Person instance \(name) is being deallocated")
+  }
+}
+</pre>
+
+And add this to the end of <code>runScenario()</code>
+
+<pre lang="swift">
+do {
+  let ernie = Person(name: "Ernie")
+  let bert = Person(name: "Bert")
+  
+  ernie.friends.append(bert) // Not deallocated
+  bert.friends.append(ernie) // Not deallocated
+}
+</pre>
+
+Here’s an example of a mixture of value types and reference types that form a reference cycle.
+
+<code>ernie</code> and <code>bert</code> stay alive by keeping a reference to each other in their <code>friends</code> array, although the array itself is a value type. Make the array <code>unowned</code>. Xcode will show an error: <code>unowned</code> only applies to class types.
+
+To break the cycle here, you’ll have to create a generic wrapper object and use it to add instances to the array. If you don’t know what generics are or how to use them, check out the <a href="https://www.raywenderlich.com/115960/swift-tutorial-introduction-to-generics">Introduction to Generics</a> tutorial on this site.
+
+Add the following above the definition of the <code>Person</code> class:
+
+<pre lang="swift">
+class Unowned<T: AnyObject> {
+  unowned var value: T
+  init (_ value: T) {
+    self.value = value
+  }
+}
+</pre>
+
+Then, change the definition of the <code>friends</code> property in <code>Person</code> like so:
+
+<pre lang="swift">
+var friends: [Unowned<Person>] = []
+</pre>
+
+And finally, change the <code>do</code> in <code>runScenario()</code> block to look like this:
+
+<pre lang="swift">do {
+  let ernie = Person(name: "Ernie")
+  let bert = Person(name: "Bert")
+  
+  ernie.friends.append(Unowned(bert))
+  bert.friends.append(Unowned(ernie))
+}</pre>
+
+<code>ernie</code> and <code>bert</code> now deallocate happily!
+
+The <code>friends</code> array isn’t a collection of <code>Person</code> objects anymore, but instead a collection of <code>Unowned</code> objects that serve as a wrapper for the <code>Person</code> instances.
+
+To access the <code>Person</code> object within <code>Unowned</code> use the <code>value</code> property, like so:
+
+<pre lang="swift">
+    let firstFriend = bert.friends.first?.value // get ernie 
+</pre>
+
+<h2>Where to Go From Here?</h2>
+
+You now have a good understanding of memory management in Swift and know how ARC works. If you want to learn more about the new debug tools in Xcode 10, I suggest watching <a href="https://developer.apple.com/videos/play/wwdc2016/410/">this WWDC session</a>.
+
+If you want an even more in-depth look at how weak references are implemented in Swift, check out Mike Ash’s blog post 
+<a href="https://www.mikeash.com/pyblog/friday-qa-2015-12-11-swift-weak-references.html">Swift Weak References</a>. It covers how weak references in Swift differ from the Objective-C implementation, and how Swift actually keeps two counts under the hood: one for strong references and one for weak references.
+
+Finally, if you are a RW subscriber, check out the <a href="https://www.raywenderlich.com/140865/ios-10-screencast-memory-graph-debugger">iOS 10 Screencast: Memory Graph Debugger</a>. It gives some great tips for getting the most out of the memory visualizer.
+
+What do you think about the ARC approach? Let me know in the comments!

@@ -1,0 +1,25 @@
+{
+    "dt": 1550973600,
+    "temp": {
+        "day": 285.15,
+        "min": 285.15,
+        "max": 285.93,
+        "night": 285.43,
+        "eve": 285.15,
+        "morn": 285.15
+    },
+    "pressure": 1021.97,
+    "humidity": 100,
+    "weather": [
+        {
+            "id": 500,
+            "main": "Rain",
+            "description": "light rain",
+            "icon": "10d"
+        }
+    ],
+    "speed": 3.82,
+    "deg": 205,
+    "clouds": 88,
+    "rain": 0.46
+}
