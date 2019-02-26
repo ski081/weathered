@@ -7,25 +7,56 @@
 //
 
 import Cocoa
+import CoreLocation
 
 @NSApplicationMain
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    let locationManager = CLLocationManager()
+    var currentLocation: CLLocation!
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         statusItem.button?.title = "--°"
         statusItem.button?.action = #selector(AppDelegate.displayPopup(_:))
+        
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.startMonitoringSignificantLocationChanges()
+        locationManager.distanceFilter = 1000
+        locationManager.startUpdatingLocation()
+        
+        let updateWeatherData = Timer.scheduledTimer(timeInterval: 60 * 15,
+                                                     target: self,
+                                                     selector: #selector(AppDelegate.downloadWeatherData),
+                                                     userInfo: nil,
+                                                     repeats: true)
+        updateWeatherData.tolerance = 60
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else {
+            return
+        }
+        
+        currentLocation = location
+        Location.instance.latitude = location.coordinate.latitude
+        Location.instance.longitude = location.coordinate.longitude
+        downloadWeatherData()
+    }
+    
+    @objc func downloadWeatherData() {
         WeatherService.instance.downloadWeatherDetails {
             guard let temp = WeatherService.instance.currentWeather?.currentTemp else {
                 return
             }
             
             self.statusItem.button?.title = "\(temp)°"
+            
+            WeatherService.instance.downloadForecast {
+                NotificationCenter.default.post(Notification(name: Notification.Name.Download.downloadComplete))
+                self.locationManager.stopUpdatingLocation()
+            }
         }
-    }
-
-    func applicationWillTerminate(_ aNotification: Notification) {
-
     }
     
     @objc

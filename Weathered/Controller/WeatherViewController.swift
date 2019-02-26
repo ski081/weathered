@@ -44,9 +44,21 @@ class WeatherViewController: NSViewController {
                                         font: "Avenir Next",
                                         size: 11)
         
-        WeatherService.instance.downloadForecast { [unowned self] in
-            self.collectionView.reloadData()
-        }
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(dataDownloadComplete(_:)),
+                                               name: Notification.Name.Download.downloadComplete,
+                                               object: nil)
+    }
+    
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        NotificationCenter.default.removeObserver(self,
+                                                  name: Notification.Name.Download.downloadComplete,
+                                                  object: nil)
+    }
+    
+    @objc func dataDownloadComplete(_ notification: Notification) {
+        updateUI()
     }
 
     func updateUI() {
@@ -58,6 +70,7 @@ class WeatherViewController: NSViewController {
         temperatureLabel.stringValue = "\(weather.currentTemp)°"
         weatherConditionLabel.stringValue = weather.weatherType.rawValue
         weatherImageView.image = NSImage(named: NSImage.Name("\(weather.weatherType.rawValue)"))
+        collectionView.reloadData()
     }
     
     
