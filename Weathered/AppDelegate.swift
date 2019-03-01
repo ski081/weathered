@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
                                                      userInfo: nil,
                                                      repeats: true)
         updateWeatherData.tolerance = 60
+        downloadWeatherData()
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
